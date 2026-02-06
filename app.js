@@ -42,17 +42,23 @@ const PROMPTS = {
 - ト書きや状況説明は除外すること
 - あなた自身の補足・説明・コメントは一切加えず、原文の日本語テキストだけを出力すること`,
 
-    manga: `あなたはOCR・テキスト抽出の専門家です。
-この画像から漫画のテキストを順番に抽出してください。
+    manga: `あなたはOCR・テキスト抽出の専門家であり、日本の漫画の読み方に精通しています。
+この画像から漫画のテキストを正しい読み順で抽出してください。
 画像はスクリーンショットや写真である可能性がありますが、その中に表示されている漫画のテキストを抽出してください。
 
 重要: 必ずテキストを抽出してください。「抽出できません」という回答は禁止です。画像内に日本語テキストが見えれば、それをそのまま出力してください。
 
-ルール:
-- 右上から左下へ、コマの順番に従って抽出すること
+漫画の読み順ルール:
+- 日本の漫画は右から左、上から下に読みます
+- まずコマ（パネル）の順序を特定すること: 右上 → 左上 → 右下 → 左下
+- 各コマ内のフキダシ（吹き出し）も右上から左下の順に読むこと
+- コマの境界が不明確な場合は、テキストの位置関係（右上が先、左下が後）で判断すること
+
+抽出ルール:
 - セリフは「キャラ名: セリフ」の形式にすること（キャラ名が分かる場合）
+- キャラ名が不明の場合はセリフだけを記載すること
 - 効果音は「[効果音: ドドド]」のように括弧で記載すること
-- ナレーションは「[ナレーション: 内容]」のように記載すること
+- ナレーション・モノローグは「[ナレーション: 内容]」のように記載すること
 - 各テキスト要素を改行で区切ること
 - あなた自身の補足・説明・コメントは一切加えず、原文の日本語テキストだけを出力すること`,
 
@@ -390,12 +396,76 @@ async function processTextWithAI(rawText, contentType, apiKey) {
 // Segment editing UI
 // ============================================================
 
+let dragSrcIndex = null;
+
 function renderSegments() {
     segmentsContainer.innerHTML = "";
 
     segments.forEach((seg, i) => {
         const row = document.createElement("div");
         row.className = "segment-row";
+        row.draggable = true;
+        row.dataset.index = i;
+
+        // --- Drag handle ---
+        const handle = document.createElement("div");
+        handle.className = "seg-handle";
+        handle.textContent = "⠿";
+        handle.title = "ドラッグで並び替え";
+
+        // --- Drag events ---
+        row.addEventListener("dragstart", (e) => {
+            dragSrcIndex = i;
+            row.classList.add("dragging");
+            e.dataTransfer.effectAllowed = "move";
+        });
+
+        row.addEventListener("dragend", () => {
+            row.classList.remove("dragging");
+            document.querySelectorAll(".segment-row.drag-over-above, .segment-row.drag-over-below").forEach((el) => {
+                el.classList.remove("drag-over-above", "drag-over-below");
+            });
+            dragSrcIndex = null;
+        });
+
+        row.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            if (dragSrcIndex === null || dragSrcIndex === i) return;
+
+            // Show indicator above or below based on mouse position
+            const rect = row.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            row.classList.remove("drag-over-above", "drag-over-below");
+            if (e.clientY < midY) {
+                row.classList.add("drag-over-above");
+            } else {
+                row.classList.add("drag-over-below");
+            }
+        });
+
+        row.addEventListener("dragleave", () => {
+            row.classList.remove("drag-over-above", "drag-over-below");
+        });
+
+        row.addEventListener("drop", (e) => {
+            e.preventDefault();
+            row.classList.remove("drag-over-above", "drag-over-below");
+            if (dragSrcIndex === null || dragSrcIndex === i) return;
+
+            const rect = row.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            let targetIndex = e.clientY < midY ? i : i + 1;
+
+            // Move the segment
+            const [moved] = segments.splice(dragSrcIndex, 1);
+            if (targetIndex > dragSrcIndex) targetIndex--;
+            segments.splice(targetIndex, 0, moved);
+
+            audioBlobs = [];
+            dragSrcIndex = null;
+            renderSegments();
+        });
 
         const num = document.createElement("div");
         num.className = "seg-number";
@@ -433,6 +503,7 @@ function renderSegments() {
             renderSegments();
         });
 
+        row.appendChild(handle);
         row.appendChild(num);
         row.appendChild(textarea);
         row.appendChild(voiceSelect);

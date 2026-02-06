@@ -206,6 +206,35 @@ header h1 {
     background: #fafafa;
     border-radius: 10px;
     border: 1px solid #e8e8ed;
+    transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.segment-row .seg-handle {
+    min-width: 20px;
+    padding-top: 8px;
+    font-size: 1.1rem;
+    color: #c0c0c0;
+    cursor: grab;
+    text-align: center;
+    user-select: none;
+    line-height: 1;
+}
+
+.segment-row .seg-handle:active {
+    cursor: grabbing;
+}
+
+.segment-row.dragging {
+    opacity: 0.4;
+    border-color: #0071e3;
+}
+
+.segment-row.drag-over-above {
+    box-shadow: 0 -3px 0 0 #0071e3;
+}
+
+.segment-row.drag-over-below {
+    box-shadow: 0 3px 0 0 #0071e3;
 }
 
 .segment-row .seg-number {
