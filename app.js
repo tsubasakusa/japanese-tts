@@ -76,6 +76,7 @@ const PROMPTS = {
 let uploadedFile = null;
 let segments = [];        // [{ text, voice }]
 let audioBlobs = [];      // [Blob | null]
+let audioTimestamp = "";   // timestamp for file naming
 
 // ============================================================
 // DOM references
@@ -476,6 +477,9 @@ generateBtn.addEventListener("click", async () => {
     generateProgress.hidden = false;
     audioBlobs = new Array(segments.length).fill(null);
 
+    const now = new Date();
+    audioTimestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+
     const model = ttsModelSelect.value;
     const speed = parseFloat(ttsSpeedInput.value);
 
@@ -563,7 +567,7 @@ function renderAudioResults() {
         dlBtn.className = "btn-download";
         dlBtn.textContent = "保存";
         dlBtn.addEventListener("click", () => {
-            downloadBlob(audioBlobs[i], `segment_${String(i + 1).padStart(3, "0")}.mp3`);
+            downloadBlob(audioBlobs[i], `segment_${String(i + 1).padStart(3, "0")}_${audioTimestamp}.mp3`);
         });
 
         row.appendChild(info);
@@ -581,13 +585,13 @@ downloadAllBtn.addEventListener("click", async () => {
     }
 
     if (validBlobs.length === 1) {
-        downloadBlob(validBlobs[0], "audio.mp3");
+        downloadBlob(validBlobs[0], `audio_${audioTimestamp}.mp3`);
         return;
     }
 
     // Combine all MP3 blobs into one file
     const combined = new Blob(validBlobs, { type: "audio/mpeg" });
-    downloadBlob(combined, "all_segments_combined.mp3");
+    downloadBlob(combined, `all_segments_${audioTimestamp}.mp3`);
 });
 
 function downloadBlob(blob, filename) {
