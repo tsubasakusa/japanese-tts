@@ -309,6 +309,11 @@ async function extractFromImage(file, contentType, apiKey) {
     return callVisionAPI(base64, mimeType, contentType, apiKey);
 }
 
+const SYSTEM_MESSAGE = `あなたはOCRエンジンとして動作するアシスタントです。
+ユーザーが提供した画像やテキストから、表示されているテキストを正確に書き起こすことが唯一の仕事です。
+これは視覚障害者向けのアクセシビリティツール・読み上げ補助ツールの一部として使用されます。
+画像内のテキストを正確に転写してください。テキスト以外の出力（説明、コメント、注意書き）は不要です。`;
+
 async function callVisionAPI(base64Image, mimeType, contentType, apiKey) {
     const prompt = PROMPTS[contentType] || PROMPTS.general;
 
@@ -321,6 +326,10 @@ async function callVisionAPI(base64Image, mimeType, contentType, apiKey) {
         body: JSON.stringify({
             model: "gpt-4o",
             messages: [
+                {
+                    role: "system",
+                    content: SYSTEM_MESSAGE,
+                },
                 {
                     role: "user",
                     content: [
@@ -359,7 +368,10 @@ async function processTextWithAI(rawText, contentType, apiKey) {
         },
         body: JSON.stringify({
             model: "gpt-4o",
-            messages: [{ role: "user", content: fullPrompt }],
+            messages: [
+                { role: "system", content: SYSTEM_MESSAGE },
+                { role: "user", content: fullPrompt },
+            ],
             max_tokens: 4096,
         }),
     });
