@@ -39,16 +39,17 @@
             </div>
 
             <div class="upload-area" id="upload-area">
-                <input type="file" id="file-input" accept=".pdf,.txt,.jpg,.jpeg,.png" hidden>
+                <input type="file" id="file-input" accept=".pdf,.txt,.jpg,.jpeg,.png" multiple hidden>
                 <div class="upload-placeholder" id="upload-placeholder">
                     <span class="upload-icon">📁</span>
                     <p>クリックまたはドラッグ＆ドロップ</p>
-                    <p class="hint">PDF, TXT, JPG, PNG</p>
+                    <p class="hint">PDF, TXT, JPG, PNG（複数選択可）</p>
                 </div>
-                <div class="upload-preview" id="upload-preview" hidden>
-                    <img id="preview-image" alt="preview" hidden>
-                    <div id="preview-info"></div>
-                </div>
+            </div>
+            <div id="pages-preview" class="pages-preview" hidden>
+                <p class="hint pages-hint">ページ順序を確認してください。▲▼ またはドラッグで並び替えできます。</p>
+                <div id="pages-container"></div>
+                <div id="pages-info"></div>
             </div>
         </section>
 

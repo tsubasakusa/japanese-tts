@@ -79,9 +79,9 @@ const PROMPTS = {
 // State
 // ============================================================
 
-let uploadedFile = null;
-let segments = [];        // [{ text, voice }]
-let audioBlobs = [];      // [Blob | null]
+let uploadedFiles = [];    // [File, ...]
+let segments = [];         // [{ text, voice }]
+let audioBlobs = [];       // [Blob | null]
 let audioTimestamp = "";   // timestamp for file naming
 
 // ============================================================
@@ -94,9 +94,9 @@ const contentTypeSelect = document.getElementById("content-type");
 const uploadArea = document.getElementById("upload-area");
 const fileInput = document.getElementById("file-input");
 const uploadPlaceholder = document.getElementById("upload-placeholder");
-const uploadPreview = document.getElementById("upload-preview");
-const previewImage = document.getElementById("preview-image");
-const previewInfo = document.getElementById("preview-info");
+const pagesPreview = document.getElementById("pages-preview");
+const pagesContainer = document.getElementById("pages-container");
+const pagesInfo = document.getElementById("pages-info");
 const extractSection = document.getElementById("extract-section");
 const extractBtn = document.getElementById("extract-btn");
 const extractStatus = document.getElementById("extract-status");
@@ -161,41 +161,33 @@ uploadArea.addEventListener("drop", (e) => {
     e.preventDefault();
     uploadArea.classList.remove("drag-over");
     if (e.dataTransfer.files.length > 0) {
-        handleFile(e.dataTransfer.files[0]);
+        handleFiles(Array.from(e.dataTransfer.files));
     }
 });
 
 fileInput.addEventListener("change", () => {
     if (fileInput.files.length > 0) {
-        handleFile(fileInput.files[0]);
+        handleFiles(Array.from(fileInput.files));
     }
 });
 
-function handleFile(file) {
-    const validTypes = [
-        "application/pdf",
-        "text/plain",
-        "image/jpeg",
-        "image/png",
-        "image/jpg",
-    ];
-    if (!validTypes.includes(file.type)) {
+const VALID_TYPES = ["application/pdf", "text/plain", "image/jpeg", "image/png", "image/jpg"];
+
+function handleFiles(files) {
+    const valid = files.filter((f) => VALID_TYPES.includes(f.type));
+    if (valid.length === 0) {
         alert("サポートされていないファイル形式です。PDF, TXT, JPG, PNGのみ対応しています。");
         return;
     }
 
-    uploadedFile = file;
+    // Sort by filename for natural page ordering
+    valid.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+    uploadedFiles = valid;
     uploadPlaceholder.hidden = true;
-    uploadPreview.hidden = false;
+    pagesPreview.hidden = false;
 
-    previewInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-
-    if (file.type.startsWith("image/")) {
-        previewImage.hidden = false;
-        previewImage.src = URL.createObjectURL(file);
-    } else {
-        previewImage.hidden = true;
-    }
+    renderPagesPreviews();
 
     // Show extract section, hide subsequent sections
     extractSection.hidden = false;
@@ -205,6 +197,95 @@ function handleFile(file) {
     extractStatus.hidden = true;
     segments = [];
     audioBlobs = [];
+}
+
+function renderPagesPreviews() {
+    pagesContainer.innerHTML = "";
+
+    const totalSize = uploadedFiles.reduce((s, f) => s + f.size, 0);
+    pagesInfo.textContent = `${uploadedFiles.length} ファイル（合計 ${(totalSize / 1024).toFixed(1)} KB）`;
+
+    uploadedFiles.forEach((file, i) => {
+        const card = document.createElement("div");
+        card.className = "page-card";
+        card.dataset.index = i;
+
+        // Thumbnail
+        const thumb = document.createElement("div");
+        thumb.className = "page-thumb";
+        if (file.type.startsWith("image/")) {
+            const img = document.createElement("img");
+            img.src = URL.createObjectURL(file);
+            img.alt = file.name;
+            thumb.appendChild(img);
+        } else {
+            const icon = document.createElement("span");
+            icon.className = "page-icon";
+            icon.textContent = file.type === "application/pdf" ? "PDF" : "TXT";
+            thumb.appendChild(icon);
+        }
+
+        // Label
+        const label = document.createElement("div");
+        label.className = "page-label";
+        label.textContent = `${i + 1}`;
+
+        // Name
+        const name = document.createElement("div");
+        name.className = "page-name";
+        name.textContent = file.name.length > 14 ? file.name.slice(0, 11) + "..." : file.name;
+        name.title = file.name;
+
+        // Arrows (for mobile + desktop)
+        const arrows = document.createElement("div");
+        arrows.className = "page-arrows";
+
+        const upBtn = document.createElement("button");
+        upBtn.textContent = "◀";
+        upBtn.disabled = i === 0;
+        upBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (i === 0) return;
+            [uploadedFiles[i - 1], uploadedFiles[i]] = [uploadedFiles[i], uploadedFiles[i - 1]];
+            renderPagesPreviews();
+        });
+
+        const downBtn = document.createElement("button");
+        downBtn.textContent = "▶";
+        downBtn.disabled = i === uploadedFiles.length - 1;
+        downBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (i === uploadedFiles.length - 1) return;
+            [uploadedFiles[i], uploadedFiles[i + 1]] = [uploadedFiles[i + 1], uploadedFiles[i]];
+            renderPagesPreviews();
+        });
+
+        arrows.appendChild(upBtn);
+        arrows.appendChild(downBtn);
+
+        // Delete button
+        const delBtn = document.createElement("button");
+        delBtn.className = "page-del";
+        delBtn.textContent = "✕";
+        delBtn.title = "削除";
+        delBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            uploadedFiles.splice(i, 1);
+            if (uploadedFiles.length === 0) {
+                pagesPreview.hidden = true;
+                uploadPlaceholder.hidden = false;
+                extractSection.hidden = true;
+            }
+            renderPagesPreviews();
+        });
+
+        card.appendChild(delBtn);
+        card.appendChild(thumb);
+        card.appendChild(label);
+        card.appendChild(name);
+        card.appendChild(arrows);
+        pagesContainer.appendChild(card);
+    });
 }
 
 // ============================================================
@@ -217,34 +298,46 @@ extractBtn.addEventListener("click", async () => {
         alert("OpenAI API Keyを入力してください。");
         return;
     }
-    if (!uploadedFile) {
+    if (uploadedFiles.length === 0) {
         alert("ファイルをアップロードしてください。");
         return;
     }
 
     extractBtn.disabled = true;
-    showStatus(extractStatus, "テキストを抽出中...", "loading");
+    const total = uploadedFiles.length;
+    segments = [];
+    audioBlobs = [];
 
     try {
-        const contentType = contentTypeSelect.value;
-        let text;
+        for (let fi = 0; fi < total; fi++) {
+            const file = uploadedFiles[fi];
+            showStatus(
+                extractStatus,
+                total > 1
+                    ? `ページ ${fi + 1} / ${total} を抽出中... (${file.name})`
+                    : "テキストを抽出中...",
+                "loading"
+            );
 
-        if (uploadedFile.type === "text/plain") {
-            text = await readTextFile(uploadedFile);
-            // Optionally process with AI
-            text = await processTextWithAI(text, contentType, apiKey);
-        } else if (uploadedFile.type === "application/pdf") {
-            text = await extractFromPDF(uploadedFile, contentType, apiKey);
-        } else {
-            text = await extractFromImage(uploadedFile, contentType, apiKey);
+            const contentType = contentTypeSelect.value;
+            let text;
+
+            if (file.type === "text/plain") {
+                text = await readTextFile(file);
+                text = await processTextWithAI(text, contentType, apiKey);
+            } else if (file.type === "application/pdf") {
+                text = await extractFromPDF(file, contentType, apiKey);
+            } else {
+                text = await extractFromImage(file, contentType, apiKey);
+            }
+
+            // Parse into segments and append
+            const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+            const newSegs = lines.map((line) => ({ text: line, voice: VOICES[0].id }));
+            segments.push(...newSegs);
         }
 
-        // Parse into segments
-        const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
-        segments = lines.map((line) => ({ text: line, voice: VOICES[0].id }));
-        audioBlobs = [];
-
-        showStatus(extractStatus, "抽出完了！", "success");
+        showStatus(extractStatus, `抽出完了！（${total} ファイル → ${segments.length} セグメント）`, "success");
         renderSegments();
         editSection.hidden = false;
         generateSection.hidden = false;

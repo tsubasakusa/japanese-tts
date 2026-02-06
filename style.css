@@ -145,16 +145,122 @@ header h1 {
     color: #6e6e73;
 }
 
-.upload-preview img {
-    max-width: 100%;
-    max-height: 300px;
-    border-radius: 8px;
-    margin-bottom: 8px;
+/* Pages preview grid */
+.pages-preview {
+    margin-top: 14px;
 }
 
-#preview-info {
+.pages-hint {
+    margin-bottom: 10px;
+}
+
+#pages-container {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 8px 0 12px;
+    -webkit-overflow-scrolling: touch;
+}
+
+#pages-info {
+    font-size: 0.8rem;
+    color: #86868b;
+    margin-top: 4px;
+}
+
+.page-card {
+    position: relative;
+    flex-shrink: 0;
+    width: 100px;
+    border: 2px solid #e8e8ed;
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+    text-align: center;
+    transition: border-color 0.2s;
+}
+
+.page-card .page-del {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    font-size: 0.65rem;
+    cursor: pointer;
+    line-height: 20px;
+    z-index: 1;
+}
+
+.page-thumb {
+    width: 100%;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f7;
+    overflow: hidden;
+}
+
+.page-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.page-icon {
     font-size: 0.85rem;
-    color: #6e6e73;
+    font-weight: 700;
+    color: #86868b;
+}
+
+.page-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #0071e3;
+    padding: 4px 0 0;
+}
+
+.page-name {
+    font-size: 0.65rem;
+    color: #86868b;
+    padding: 0 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.page-arrows {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 0 6px;
+}
+
+.page-arrows button {
+    width: 26px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid #d2d2d7;
+    border-radius: 4px;
+    background: #fff;
+    color: #86868b;
+    font-size: 0.6rem;
+    cursor: pointer;
+}
+
+.page-arrows button:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.page-arrows button:not(:disabled):active {
+    background: #e8e8ed;
 }
 
 /* Buttons */
