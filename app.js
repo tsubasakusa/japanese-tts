@@ -398,6 +398,11 @@ async function processTextWithAI(rawText, contentType, apiKey) {
 
 let dragSrcIndex = null;
 
+// --- Touch drag state ---
+let touchDragIndex = null;
+let touchClone = null;
+let touchCurrentTarget = null;
+
 function renderSegments() {
     segmentsContainer.innerHTML = "";
 
@@ -410,10 +415,44 @@ function renderSegments() {
         // --- Drag handle ---
         const handle = document.createElement("div");
         handle.className = "seg-handle";
-        handle.textContent = "⠿";
         handle.title = "ドラッグで並び替え";
 
-        // --- Drag events ---
+        // Drag grip icon + mobile arrow buttons
+        const grip = document.createElement("span");
+        grip.className = "grip-icon";
+        grip.textContent = "⠿";
+
+        const moveUp = document.createElement("button");
+        moveUp.className = "btn-move";
+        moveUp.textContent = "▲";
+        moveUp.title = "上に移動";
+        moveUp.disabled = i === 0;
+        moveUp.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (i === 0) return;
+            [segments[i - 1], segments[i]] = [segments[i], segments[i - 1]];
+            audioBlobs = [];
+            renderSegments();
+        });
+
+        const moveDown = document.createElement("button");
+        moveDown.className = "btn-move";
+        moveDown.textContent = "▼";
+        moveDown.title = "下に移動";
+        moveDown.disabled = i === segments.length - 1;
+        moveDown.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (i === segments.length - 1) return;
+            [segments[i], segments[i + 1]] = [segments[i + 1], segments[i]];
+            audioBlobs = [];
+            renderSegments();
+        });
+
+        handle.appendChild(moveUp);
+        handle.appendChild(grip);
+        handle.appendChild(moveDown);
+
+        // --- Desktop drag events ---
         row.addEventListener("dragstart", (e) => {
             dragSrcIndex = i;
             row.classList.add("dragging");
@@ -433,7 +472,6 @@ function renderSegments() {
             e.dataTransfer.dropEffect = "move";
             if (dragSrcIndex === null || dragSrcIndex === i) return;
 
-            // Show indicator above or below based on mouse position
             const rect = row.getBoundingClientRect();
             const midY = rect.top + rect.height / 2;
             row.classList.remove("drag-over-above", "drag-over-below");
@@ -457,7 +495,6 @@ function renderSegments() {
             const midY = rect.top + rect.height / 2;
             let targetIndex = e.clientY < midY ? i : i + 1;
 
-            // Move the segment
             const [moved] = segments.splice(dragSrcIndex, 1);
             if (targetIndex > dragSrcIndex) targetIndex--;
             segments.splice(targetIndex, 0, moved);
@@ -466,6 +503,21 @@ function renderSegments() {
             dragSrcIndex = null;
             renderSegments();
         });
+
+        // --- Touch drag events (on handle only) ---
+        handle.addEventListener("touchstart", (e) => {
+            touchDragIndex = i;
+            row.classList.add("dragging");
+
+            // Create floating clone
+            touchClone = row.cloneNode(true);
+            touchClone.classList.add("touch-ghost");
+            const rect = row.getBoundingClientRect();
+            touchClone.style.width = rect.width + "px";
+            touchClone.style.left = rect.left + "px";
+            touchClone.style.top = rect.top + "px";
+            document.body.appendChild(touchClone);
+        }, { passive: true });
 
         const num = document.createElement("div");
         num.className = "seg-number";
@@ -478,7 +530,6 @@ function renderSegments() {
             segments[i].text = textarea.value;
             autoResize(textarea);
         });
-        // Auto-resize on render
         requestAnimationFrame(() => autoResize(textarea));
 
         const voiceSelect = document.createElement("select");
@@ -511,6 +562,64 @@ function renderSegments() {
         segmentsContainer.appendChild(row);
     });
 }
+
+// --- Global touch move/end handlers ---
+document.addEventListener("touchmove", (e) => {
+    if (touchDragIndex === null || !touchClone) return;
+    const touch = e.touches[0];
+    touchClone.style.top = (touch.clientY - 24) + "px";
+
+    // Highlight target row
+    document.querySelectorAll(".segment-row.drag-over-above, .segment-row.drag-over-below").forEach((el) => {
+        el.classList.remove("drag-over-above", "drag-over-below");
+    });
+    touchCurrentTarget = null;
+
+    const rows = segmentsContainer.querySelectorAll(".segment-row");
+    rows.forEach((row) => {
+        const idx = parseInt(row.dataset.index);
+        if (idx === touchDragIndex) return;
+        const rect = row.getBoundingClientRect();
+        if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+            const midY = rect.top + rect.height / 2;
+            if (touch.clientY < midY) {
+                row.classList.add("drag-over-above");
+            } else {
+                row.classList.add("drag-over-below");
+            }
+            touchCurrentTarget = { index: idx, above: touch.clientY < midY };
+        }
+    });
+}, { passive: true });
+
+document.addEventListener("touchend", () => {
+    if (touchDragIndex === null) return;
+
+    // Clean up ghost
+    if (touchClone) {
+        touchClone.remove();
+        touchClone = null;
+    }
+
+    // Clean up styles
+    document.querySelectorAll(".segment-row.dragging").forEach((el) => el.classList.remove("dragging"));
+    document.querySelectorAll(".segment-row.drag-over-above, .segment-row.drag-over-below").forEach((el) => {
+        el.classList.remove("drag-over-above", "drag-over-below");
+    });
+
+    // Perform move
+    if (touchCurrentTarget !== null && touchCurrentTarget.index !== touchDragIndex) {
+        let targetIndex = touchCurrentTarget.above ? touchCurrentTarget.index : touchCurrentTarget.index + 1;
+        const [moved] = segments.splice(touchDragIndex, 1);
+        if (targetIndex > touchDragIndex) targetIndex--;
+        segments.splice(targetIndex, 0, moved);
+        audioBlobs = [];
+        renderSegments();
+    }
+
+    touchDragIndex = null;
+    touchCurrentTarget = null;
+});
 
 function autoResize(textarea) {
     textarea.style.height = "auto";

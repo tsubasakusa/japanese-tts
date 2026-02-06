@@ -210,18 +210,65 @@ header h1 {
 }
 
 .segment-row .seg-handle {
-    min-width: 20px;
-    padding-top: 8px;
-    font-size: 1.1rem;
-    color: #c0c0c0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 28px;
+    padding-top: 4px;
     cursor: grab;
-    text-align: center;
     user-select: none;
-    line-height: 1;
+    touch-action: none;
 }
 
 .segment-row .seg-handle:active {
     cursor: grabbing;
+}
+
+.segment-row .seg-handle .grip-icon {
+    font-size: 1.1rem;
+    color: #c0c0c0;
+    line-height: 1;
+}
+
+.segment-row .seg-handle .btn-move {
+    display: none;
+    width: 24px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid #d2d2d7;
+    border-radius: 4px;
+    background: #fff;
+    color: #86868b;
+    font-size: 0.6rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.segment-row .seg-handle .btn-move:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.segment-row .seg-handle .btn-move:not(:disabled):active {
+    background: #e8e8ed;
+}
+
+/* Touch drag ghost */
+.touch-ghost {
+    position: fixed;
+    z-index: 1000;
+    opacity: 0.85;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+}
+
+/* Mobile: show arrow buttons, hide grip */
+@media (pointer: coarse) {
+    .segment-row .seg-handle .btn-move {
+        display: block;
+    }
 }
 
 .segment-row.dragging {
