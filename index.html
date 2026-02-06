@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本語 TTS - Japanese Text-to-Speech</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>日本語テキスト読み上げツール</h1>
+            <p class="subtitle">PDF・TXT・画像から日本語テキストを抽出し、音声を生成</p>
+        </header>
+
+        <!-- API Key -->
+        <section class="card" id="api-section">
+            <h2>OpenAI API Key</h2>
+            <div class="api-key-row">
+                <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
+                <button id="toggle-key-visibility" type="button" title="表示/非表示">👁</button>
+            </div>
+            <p class="hint">画像・PDFのテキスト抽出と音声生成に使用します。キーはブラウザ内のみで使用され、外部には送信されません。</p>
+        </section>
+
+        <!-- Step 1: Upload -->
+        <section class="card" id="upload-section">
+            <h2>① ファイルアップロード</h2>
+
+            <div class="form-row">
+                <label for="content-type">コンテンツの種類:</label>
+                <select id="content-type">
+                    <option value="news">ニュース / News</option>
+                    <option value="dialogue">対話 / Dialogue</option>
+                    <option value="manga">漫画 / Manga</option>
+                    <option value="general">一般テキスト / General</option>
+                </select>
+            </div>
+
+            <div class="upload-area" id="upload-area">
+                <input type="file" id="file-input" accept=".pdf,.txt,.jpg,.jpeg,.png" hidden>
+                <div class="upload-placeholder" id="upload-placeholder">
+                    <span class="upload-icon">📁</span>
+                    <p>クリックまたはドラッグ＆ドロップ</p>
+                    <p class="hint">PDF, TXT, JPG, PNG</p>
+                </div>
+                <div class="upload-preview" id="upload-preview" hidden>
+                    <img id="preview-image" alt="preview" hidden>
+                    <div id="preview-info"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Extract -->
+        <section class="card" id="extract-section" hidden>
+            <h2>② テキスト抽出</h2>
+            <button id="extract-btn" class="btn-primary">テキストを抽出する</button>
+            <div id="extract-status" class="status" hidden></div>
+        </section>
+
+        <!-- Step 3: Edit Segments -->
+        <section class="card" id="edit-section" hidden>
+            <h2>③ テキスト編集</h2>
+            <p class="hint">各セグメントの内容と声を編集できます。不要な行は削除ボタンで消せます。</p>
+            <div id="segments-container"></div>
+            <button id="add-segment-btn" class="btn-secondary">＋ 行を追加</button>
+        </section>
+
+        <!-- Step 4: Generate Audio -->
+        <section class="card" id="generate-section" hidden>
+            <h2>④ 音声生成</h2>
+            <div class="form-row">
+                <label for="tts-model">モデル:</label>
+                <select id="tts-model">
+                    <option value="tts-1">tts-1（標準・高速）</option>
+                    <option value="tts-1-hd">tts-1-hd（高品質）</option>
+                </select>
+                <label for="tts-speed">速度:</label>
+                <input type="range" id="tts-speed" min="0.25" max="4.0" step="0.25" value="1.0">
+                <span id="speed-value">1.0x</span>
+            </div>
+            <button id="generate-btn" class="btn-primary">すべての音声を生成</button>
+            <div id="generate-progress" hidden>
+                <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+                <p id="progress-text"></p>
+            </div>
+        </section>
+
+        <!-- Step 5: Preview & Download -->
+        <section class="card" id="result-section" hidden>
+            <h2>⑤ プレビュー・ダウンロード</h2>
+            <div id="audio-results"></div>
+            <div class="download-all-row">
+                <button id="download-all-btn" class="btn-primary">📦 すべてダウンロード (ZIP)</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
